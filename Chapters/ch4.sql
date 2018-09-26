@@ -203,23 +203,141 @@ ORDER BY engagements.startdate DESC, engagements.engagementnumber;
 /* ***** School Scheduling Database ******** */
 SET search_path = schoolschedulingexample, "$user", public;
 
+-- 1. "Show me a complete list of all the subjects we offer."
+SELECT subjectcode, subjectname, subjectdescription
+FROM subjects;
+
+/* Book Answer */
 SELECT view_definition
 FROM information_schema.views
 WHERE table_schema = 'schoolschedulingexample'
 AND table_name = 'ch04_subject_list';
 
+SELECT subjects.subjectname
+  FROM subjects;
+
+-- 2. "What kinds of titles are associated with our faculty?"
+SELECT DISTINCT title
+FROM faculty;
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'schoolschedulingexample'
+AND table_name = 'ch04_faculty_titles';
+
+SELECT DISTINCT faculty.title
+  FROM faculty;
+
+-- 3. "List the names and phone numbers of all our staff, and sort them by last
+-- name and first name."
+SELECT StfLastName, StfFirstName, StfPhoneNumber
+FROM staff
+ORDER BY StfLastName ASC, StfFirstName ASC;
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'schoolschedulingexample'
+AND table_name = 'ch04_staff_phone_list';
+
+SELECT staff.stflastname,
+   staff.stffirstname,
+   staff.stfphonenumber
+  FROM staff
+ORDER BY staff.stflastname, staff.stffirstname;
+
 /* ***** Bowling League Database *********** */
 SET search_path = bowlingleagueexample, "$user", public;
+
+-- 1. List all of the teams in alphabetical order.
+SELECT teamname
+FROM teams
+ORDER BY teamname;
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'bowlingleagueexample'
+AND table_name = 'ch04_team_list';
+
+SELECT teams.teamname
+FROM teams
+ORDER BY teams.teamname;
+
+-- 2. Show me all the bowling score information for each of our members.
+SELECT MatchID, GameNumber, BowlerID, RawScore, HandicapScore, WonGame
+FROM bowler_scores;
 
 SELECT view_definition
 FROM information_schema.views
 WHERE table_schema = 'bowlingleagueexample'
-AND table_name = 'ch04_';
+AND table_name = 'ch04_bowler_score_information';
+
+SELECT bowler_scores.matchid,
+    bowler_scores.gamenumber,
+    bowler_scores.bowlerid,
+    bowler_scores.rawscore,
+    bowler_scores.handicapscore,
+    bowler_scores.wongame
+FROM bowler_scores;
+
+-- 3. Show me a list of bowlers and their addresses, and sort it in alphabetical
+-- order." 
+SELECT BowlerLastName, BowlerFirstName, 
+  BowlerAddress, BowlerCity, BowlerState, BowlerZip
+FROM bowlers
+ORDER BY BowlerLastName, BowlerFirstName;
+
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'bowlingleagueexample'
+AND table_name = 'ch04_bowler_names_addresses';
+
+SELECT bowlers.bowlerlastname,
+    bowlers.bowlerfirstname,
+    bowlers.bowleraddress,
+    bowlers.bowlercity,
+    bowlers.bowlerstate,
+    bowlers.bowlerzip
+FROM bowlers
+ORDER BY bowlers.bowlerlastname, bowlers.bowlerfirstname;
 
 /* ***** Recipes Database ****************** */
 SET search_path = recipesexample, "$user", public;
 
+-- 1. Show me a list of all the ingredients we currently keep track of
+SELECT DISTINCT IngredientName
+FROM Ingredients;
+
+/* Book Answer */
 SELECT view_definition
 FROM information_schema.views
 WHERE table_schema = 'recipesexample'
-AND table_name = 'ch04_';
+AND table_name = 'ch04_complete_ingredient_list';
+
+SELECT ingredients.ingredientname
+FROM ingredients;
+-- 2. Show me all the main recipe information, and sort it by the name of the
+-- recipe in alphabetical order.
+SELECT *
+FROM Recipe_Classes; /* Main course recipes = 1 */
+
+SELECT RecipeTitle, Preparation, Notes
+FROM Recipes
+WHERE RecipeClassID = 1
+ORDER BY RecipeTitle ASC;
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'recipesexample'
+AND table_name = 'ch04_main_recipe_information';
+
+SELECT recipes.recipeid,
+    recipes.recipetitle,
+    recipes.recipeclassid,
+    recipes.preparation,
+    recipes.notes
+FROM recipes
+ORDER BY recipes.recipetitle;
