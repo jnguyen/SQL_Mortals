@@ -6,10 +6,6 @@
 /* *** Sample Statements                        ****/
 /* ******************************************** ****/
 /* ****** Sales Orders Database ************ */
--- Select a specific schema
-SHOW search_path;
-SET search_path = salesordersexample, "$user", public;
-
 -- Show me the names of all our vendors.
 SELECT VendName
 FROM vendors;
@@ -25,7 +21,6 @@ FROM Customers;
 -- List all entertainers and the cities they're based in, 
 -- and sort the results by city and name in ascending order.
 /* *** Entertainment Agency Database ******* */
-SET search_path = entertainmentagencyexample, "$user", public;
 
 -- List all entertainers and the cities they're based in, and sort 
 -- the results by city and name in ascending order.
@@ -39,7 +34,6 @@ SELECT DISTINCT startdate
 FROM engagements;
 
 /* ***** School Scheduling Database ******** */
-SET search_path = schoolschedulingexample, "$user", public;
 
 -- Get schema names
 SELECT schema_name
@@ -63,7 +57,6 @@ FROM buildings
 ORDER BY buildings ASC;
 
 /* ***** Bowling League Database *********** */
-SET search_path = bowlingleagueexample, "$user", public;
 
 -- Where are we holding our tournaments?
 SELECT DISTINCT TourneyLocation
@@ -76,7 +69,6 @@ FROM Tournaments
 ORDER BY TourneyDate DESC, TourneyLocation ASC;
 
 /* ***** Recipes Database ****************** */
-SET search_path = recipesexample, "$user", public;
 
 -- What types of recipes do we have, and what are the names of the
 -- recipes we have for each type? Can you sort the information by 
@@ -94,7 +86,6 @@ ORDER BY 1 ASC;
 /* *** Problems For You To Solve                ****/
 /* ******************************************** ****/
 /* ***** Sales Orders Database ************* */
-SET search_path = salesordersexample, "$user", public;
 
 -- 1. "Show me all the information on our employees."
 /* Attempt */
@@ -140,7 +131,6 @@ FROM vendors
 ORDER BY vendors.vendcity;
 
 /* ***** Entertainment Agency Database ***** */
-SET search_path = entertainmentagencyexample, "$user", public;
 
 -- 1. Give me the names and phone numbers of all our agents, and
 -- list them in last name/first name order.
@@ -201,7 +191,6 @@ SELECT engagements.startdate,
 ORDER BY engagements.startdate DESC, engagements.engagementnumber;
 
 /* ***** School Scheduling Database ******** */
-SET search_path = schoolschedulingexample, "$user", public;
 
 -- 1. "Show me a complete list of all the subjects we offer."
 SELECT subjectcode, subjectname, subjectdescription
@@ -248,7 +237,6 @@ SELECT staff.stflastname,
 ORDER BY staff.stflastname, staff.stffirstname;
 
 /* ***** Bowling League Database *********** */
-SET search_path = bowlingleagueexample, "$user", public;
 
 -- 1. List all of the teams in alphabetical order.
 SELECT teamname
@@ -304,7 +292,6 @@ FROM bowlers
 ORDER BY bowlers.bowlerlastname, bowlers.bowlerfirstname;
 
 /* ***** Recipes Database ****************** */
-SET search_path = recipesexample, "$user", public;
 
 -- 1. Show me a list of all the ingredients we currently keep track of
 SELECT DISTINCT IngredientName
