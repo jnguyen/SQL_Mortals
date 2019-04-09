@@ -331,30 +331,30 @@ FROM ztblSemesterDays,
         ON Subjects.SubjectID = Classes.SubjectID
         INNER JOIN Class_Rooms
         ON Class_Rooms.ClassRoomID = Classes.ClassRoomID)
-    WHERE Classes.SemesterNumber = ztblSemesterDays.SemesterNo
-        AND Classes.StartDate <= ztblSemesterDays.SemDate
-        -- Match correct days
-        AND 1 =
-        (CASE WHEN ztblSemesterDays.SemDayName = 'Monday'
-            AND Classes.MondaySchedule <> 0
-            THEN 1
-        WHEN ztblSemesterDays.SemDayName = 'Tuesday'
-            AND Classes.TuesdaySchedule <> 0
-            THEN 1
-        WHEN ztblSemesterDays.SemDayName = 'Wednesday'
-            AND Classes.WednesdaySchedule <> 0
-            THEN 1
-        WHEN ztblSemesterDays.SemDayName = 'Thursday'
-            AND Classes.ThursdaySchedule <> 0
-            THEN 1
-        WHEN ztblSemesterDays.SemDayName = 'Friday'
-            AND Classes.FridaySchedule <> 0
-            THEN 1
-        WHEN ztblSemesterDays.SemDayName = 'Saturday'
-            AND Classes.SaturdaySchedule <> 0
-            THEN 1
-        ELSE 0
-        END)
+WHERE Classes.SemesterNumber = ztblSemesterDays.SemesterNo
+    AND Classes.StartDate <= ztblSemesterDays.SemDate
+    -- Match correct days
+    AND 1 =
+    (CASE WHEN ztblSemesterDays.SemDayName = 'Monday'
+        AND Classes.MondaySchedule <> 0
+        THEN 1
+    WHEN ztblSemesterDays.SemDayName = 'Tuesday'
+        AND Classes.TuesdaySchedule <> 0
+        THEN 1
+    WHEN ztblSemesterDays.SemDayName = 'Wednesday'
+        AND Classes.WednesdaySchedule <> 0
+        THEN 1
+    WHEN ztblSemesterDays.SemDayName = 'Thursday'
+        AND Classes.ThursdaySchedule <> 0
+        THEN 1
+    WHEN ztblSemesterDays.SemDayName = 'Friday'
+        AND Classes.FridaySchedule <> 0
+        THEN 1
+    WHEN ztblSemesterDays.SemDayName = 'Saturday'
+        AND Classes.SaturdaySchedule <> 0
+        THEN 1
+    ELSE 0
+    END)
 ORDER BY ztblSemesterDays.SemesterNo,
     ztblSemesterDays.SemDate,
     Subjects.SubjectCode,

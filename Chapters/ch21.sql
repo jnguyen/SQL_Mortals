@@ -408,14 +408,69 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- 2. “For each city where our customers live, show me how many different
 -- musical styles they’re interested in. Give me total counts by city, total
 -- counts by style and total counts for each combination of city and style.”
--- You can find my solution in CH21_CustomerCity_Style_GROUPING_SETS (18 rows).
+-- You can find my solution in CH21_CustomerCity_Style_GROUPING_SETS (60 rows).
+SELECT Customers.CustCity,
+    Musical_Styles.StyleName,
+    COUNT(Musical_Preferences.CustomerID) AS NumStyles
+FROM entertainmentagencyexample.Customers
+    INNER JOIN Musical_Preferences
+    ON Customers.CustomerID = Musical_Preferences.CustomerID
+    INNER JOIN Musical_Styles
+    ON Musical_Preferences.StyleID = Musical_Styles.StyleID
+GROUP BY GROUPING SETS
+(CustCity, StyleName, (CustCity, StyleName));
 
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'entertainmentagencyexample'
+AND table_name = 'ch21_customercity_style_grouping_sets';
+
+SELECT customers.custcity,
+    musical_styles.stylename,
+    count(*) AS count
+FROM ((customers
+    JOIN musical_preferences
+    ON ((musical_preferences.customerid = customers.customerid)))
+    JOIN musical_styles
+    ON ((musical_styles.styleid = musical_preferences.styleid)))
+GROUP BY GROUPING SETS
+((customers.custcity), (musical_styles.stylename),
+    (customers.custcity, musical_styles.stylename));
 
 -- 3. “Give me an analysis of all the bookings we’ve had. I want to see the
 -- number of bookings and the total charge broken down by the city the agent
 -- lives in, the city the customer lives in, and the combination of the two.”
 -- You can find my solution in
 -- CH21_AgentCity_CustomerCity_Count_Charge_GROUPING_SETS (34 rows).
+SELECT Agents.AgtCity,
+    Customers.CustCity,
+    COUNT(*) AS NumBookings,
+    SUM(Engagements.ContractPrice) AS TotalCharge
+FROM Agents
+    INNER JOIN Engagements
+    ON Agents.AgentID = Engagements.AgentID
+    INNER JOIN entertainmentagencyexample.Customers
+    ON Engagements.CustomerID = Customers.CustomerID
+GROUP BY GROUPING SETS
+(Agents.AgtCity, Customers.CustCity, (Agents.AgtCity, Customers.CustCity));
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'entertainmentagencyexample'
+AND table_name = 'ch21_agentcity_customercity_count_charge_grouping_sets';
+
+SELECT a.agtcity,
+    c.custcity,
+    count(*) AS numengagements,
+    sum(e.contractprice) AS charge
+FROM ((engagements e
+    JOIN customers c
+    ON ((c.customerid = e.customerid)))
+    JOIN agents a
+    ON ((a.agentid = e.agentid)))
+GROUP BY GROUPING SETS ((a.agtcity), (c.custcity), (a.agtcity, c.custcity));
 
 /* ***** Recipes Database ****************** */
 -- 1. “I want to know how many recipes there are in each of the recipe classes
@@ -423,6 +478,31 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- class. Make sure to include any recipe classes that don’t have any recipes in
 -- them.”
 -- You can find my solution in CH21_RecipeClass_Recipe_Counts_ROLLUP (8 rows).
+SELECT Recipe_Classes.RecipeClassDescription,
+    COUNT(Recipes.RecipeID) AS NumRecipes
+FROM Recipe_Classes
+    LEFT OUTER JOIN Recipes
+    ON Recipe_Classes.RecipeClassID = Recipes.RecipeClassID
+GROUP BY ROLLUP (Recipe_Classes.RecipeClassDescription);
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'recipesexample'
+AND table_name = 'ch21_recipeclass_recipe_counts_rollup';
+
+-- Note: GROUPING() returns the grouping level in order from the left, when used
+-- with ROLLUP. So, GROUPING(...) = 0 means everything, and GROUPING(...) = 1
+-- means the first level, i.e. recipeclassdescription
+SELECT
+        CASE
+            WHEN (GROUPING(recipe_classes.recipeclassdescription) = 0) THEN recipe_classes.recipeclassdescription
+            ELSE 'Total Recipes All Classes'::character varying
+        END AS recipeclass,
+    count(recipes.recipeid) AS totalrecipes
+   FROM (recipe_classes
+     LEFT JOIN recipes ON ((recipes.recipeclassid = recipe_classes.recipeclassid)))
+  GROUP BY ROLLUP(recipe_classes.recipeclassdescription);
 
 -- 2. “I want to know the relationship between RecipeClasses and
 -- IngredientClasses. For each recipe class, show me how many different
@@ -430,6 +510,43 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- how many different recipe classes are represented.”
 -- You can find my solution in CH21_RecipeClass_IngredClass_Counts_GROUPING_SETS
 -- (25 rows).
+SELECT Recipe_Classes.RecipeClassDescription,
+    Ingredient_Classes.IngredientClassDescription,
+    COUNT(Recipes.RecipeID) AS NumClasses
+FROM Recipe_Classes
+    INNER JOIN Recipes
+    ON Recipes.RecipeClassID = Recipe_Classes.RecipeClassID
+    INNER JOIN Recipe_Ingredients
+    ON Recipe_Ingredients.RecipeID = Recipes.RecipeID
+    INNER JOIN Ingredients
+    ON Ingredients.IngredientID = Recipe_Ingredients.IngredientID
+    INNER JOIN Ingredient_Classes
+    ON Ingredient_Classes.IngredientClassID = Ingredients.IngredientClassID
+GROUP BY GROUPING SETS (Recipe_Classes.RecipeClassDescription,
+    Ingredient_Classes.IngredientClassDescription);
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'recipesexample'
+AND table_name = 'ch21_recipeclass_ingredientclass_counts';
+
+SELECT
+        CASE
+            WHEN (GROUPING(recipe_classes.recipeclassdescription) = 0) THEN recipe_classes.recipeclassdescription
+            ELSE 'Total Recipes All Classes'::character varying
+        END AS recipeclass,
+        CASE
+            WHEN (GROUPING(ingredient_classes.ingredientclassdescription) = 0) THEN ingredient_classes.ingredientclassdescription
+            ELSE 'All Ingredient Classes'::character varying
+        END AS ingredientclass,
+    count(recipes.recipeid) AS totalrecipes
+   FROM ((((recipe_classes
+     JOIN recipes ON ((recipes.recipeclassid = recipe_classes.recipeclassid)))
+     JOIN recipe_ingredients ON ((recipe_ingredients.recipeid = recipes.recipeid)))
+     JOIN ingredients ON ((ingredients.ingredientid = recipe_ingredients.ingredientid)))
+     JOIN ingredient_classes ON ((ingredient_classes.ingredientclassid = ingredients.ingredientclassid)))
+  GROUP BY GROUPING SETS ((recipe_classes.recipeclassdescription), (ingredient_classes.ingredientclassdescription));
 
 -- 3. “I want to know even more about the relationship between RecipeClasses and
 -- IngredientClasses. Show me how many recipes there are in each combination of
@@ -437,7 +554,44 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- each ingredient class regardless of the recipe class, how many recipes there
 -- are in each recipe class regardless of the ingredient class, and how many
 -- recipes there are in total.”
--- You can find my solution in CH21_RecipeClass_IngredClass_CUBE (61 rows).
+-- You can find my solution in ch21_recipeclass_ingredientclass_cube (61 rows).
+SELECT Recipe_Classes.RecipeClassDescription,
+    Ingredient_Classes.IngredientClassDescription,
+    COUNT(Recipes.RecipeID) AS NumClasses
+FROM Recipe_Classes
+    INNER JOIN Recipes
+    ON Recipes.RecipeClassID = Recipe_Classes.RecipeClassID
+    INNER JOIN Recipe_Ingredients
+    ON Recipe_Ingredients.RecipeID = Recipes.RecipeID
+    INNER JOIN Ingredients
+    ON Ingredients.IngredientID = Recipe_Ingredients.IngredientID
+    INNER JOIN Ingredient_Classes
+    ON Ingredient_Classes.IngredientClassID = Ingredients.IngredientClassID
+GROUP BY CUBE (Recipe_Classes.RecipeClassDescription,
+    Ingredient_Classes.IngredientClassDescription);
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'recipesexample'
+AND table_name = 'ch21_recipeclass_ingredientclass_cube';
+
+ SELECT
+        CASE
+            WHEN (GROUPING(recipe_classes.recipeclassdescription) = 0) THEN recipe_classes.recipeclassdescription
+            ELSE 'Total Recipes All Classes'::character varying
+        END AS recipeclass,
+        CASE
+            WHEN (GROUPING(ingredient_classes.ingredientclassdescription) = 0) THEN ingredient_classes.ingredientclassdescription
+            ELSE 'All Ingredient Classes'::character varying
+        END AS ingredientclass,
+    count(recipes.recipeid) AS totalrecipes
+   FROM ((((recipe_classes
+     JOIN recipes ON ((recipes.recipeclassid = recipe_classes.recipeclassid)))
+     JOIN recipe_ingredients ON ((recipe_ingredients.recipeid = recipes.recipeid)))
+     JOIN ingredients ON ((ingredients.ingredientid = recipe_ingredients.ingredientid)))
+     JOIN ingredient_classes ON ((ingredient_classes.ingredientclassid = ingredients.ingredientclassid)))
+  GROUP BY CUBE(recipe_classes.recipeclassdescription, ingredient_classes.ingredientclassdescription);
 
 /* ***** Sales Orders Database ************* */
 -- 1. “For each category of product, show me, by state, how much revenue the
@@ -445,11 +599,69 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- category, plus a grand total.”
 -- You can find my solution in CH21_ProductCategory_CustomerState_Revenue_CUBE
 -- (35 rows).
+SELECT Categories.CategoryDescription,
+    Customers.CustState,
+    ROUND(SUM(Order_Details.QuotedPrice * Order_Details.QuantityOrdered),2)
+        AS Revenue
+FROM Categories
+    INNER JOIN Products
+    ON Categories.CategoryID = Products.CategoryID
+    INNER JOIN Order_Details
+    ON Products.ProductNumber = Order_Details.ProductNumber
+    INNER JOIN Orders
+    ON Order_Details.OrderNumber = Orders.OrderNumber
+    INNER JOIN Customers
+    ON Orders.CustomerID = Customers.CustomerID
+GROUP BY CUBE (Categories.CategoryDescription, Customers.CustState);
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'salesordersexample'
+AND table_name = 'ch21_productcategory_customerstate_revenue_cube';
+
+SELECT pc.categorydescription,
+    c.custstate,
+    sum((od.quotedprice * (od.quantityordered)::numeric)) AS revenue
+FROM ((((orders o
+     JOIN order_details od ON ((od.ordernumber = o.ordernumber)))
+     JOIN customers c ON ((c.customerid = o.customerid)))
+     JOIN products p ON ((p.productnumber = od.productnumber)))
+     JOIN categories pc ON ((pc.categoryid = p.categoryid)))
+GROUP BY CUBE(pc.categorydescription, c.custstate);
+
 -- 2. “For each category of product, show me, by state, how much quantity the
 -- vendors have on hand. Give me subtotals for each state within a category,
 -- plus a grand total.”
 -- You can find my solution in CH21_ProductCategory_VendorState_QOH_ROLLUP (33
 -- rows).
+SELECT Categories.CategoryDescription,
+    Vendors.VendState,
+    SUM(QuantityOnHand) AS Quantity
+FROM Categories
+    INNER JOIN Products
+    ON Categories.CategoryID = Products.CategoryID
+    INNER JOIN Product_Vendors
+    ON Products.ProductNumber = Product_Vendors.ProductNumber
+    INNER JOIN Vendors
+    ON Product_Vendors.VendorID = Vendors.VendorID
+GROUP BY ROLLUP (Categories.CategoryDescription, Vendors.VendState)
+ORDER BY Categories.CategoryDescription, Vendors.VendState;
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'salesordersexample'
+AND table_name = 'ch21_productcategory_vendorstate_qoh_rollup';
+
+SELECT pc.categorydescription,
+    v.vendstate,
+    sum(p.quantityonhand) AS qoh
+FROM (((products p
+     JOIN categories pc ON ((pc.categoryid = p.categoryid)))
+     JOIN product_vendors pv ON ((pv.productnumber = p.productnumber)))
+     JOIN vendors v ON ((v.vendorid = pv.vendorid)))
+GROUP BY ROLLUP(pc.categorydescription, v.vendstate);
 
 -- 3. “For each of our vendors, let me know how many products they supply in
 -- each category. I want to see this broken down by state. For each state, show
@@ -457,6 +669,35 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- for all categories and a grand total as well.” Note that the counts will not
 -- represent the number of different products that are sold!
 -- You can find my solution in CH21_VendorState_Category_Count_ROLLUP (43 rows).
+SELECT Vendors.VendState,
+    Categories.CategoryDescription,
+    COUNT(*) AS NumProducts
+FROM Categories
+    LEFT OUTER JOIN Products
+    ON Categories.CategoryID = Products.CategoryID
+    INNER JOIN Product_Vendors
+    ON Products.ProductNumber = Product_Vendors.ProductNumber
+    INNER JOIN Vendors
+    ON Product_Vendors.VendorID = Vendors.VendorID
+GROUP BY ROLLUP (Vendors.VendState, Categories.CategoryDescription)
+ORDER BY Vendors.VendState, Categories.CategoryDescription;
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'salesordersexample'
+AND table_name = 'ch21_vendorstate_category_count_rollup';
+
+-- Note: The book solution as is was wrong, because it self-joins
+-- product_vendors onto itself
+SELECT v.vendstate,
+    c.categorydescription,
+    count(*) AS products
+FROM (((vendors v
+     JOIN product_vendors pv ON ((pv.vendorid = pv.vendorid)))
+     JOIN products p ON ((p.productnumber = pv.productnumber)))
+     JOIN categories c ON ((c.categoryid = p.categoryid)))
+GROUP BY ROLLUP(v.vendstate, c.categorydescription);
 
 /* ***** School Scheduling Database ******** */
 -- 1. “Summarize the number of class sessions scheduled, showing semester,
@@ -464,6 +705,32 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- each combination of building and classroom and for each subject.”
 -- You can find my solution in
 -- CH21_Semester_Building_ClassRoom_Subject_Count_GROUPING_SETS (82 rows).
+SELECT SemesterNo,
+    BuildingCode,
+    ClassRoomID,
+    SubjectCode,
+    COUNT(*) AS NumClasses
+FROM ch20_class_schedule_calendar
+GROUP BY GROUPING SETS (SemesterNo,
+    (BuildingCode, ClassroomID),
+    SubjectCode);
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'schoolschedulingexample'
+AND table_name = 'ch21_semester_building_classroom_subject_count_grouping_sets';
+
+SELECT ch20_class_schedule_calendar.semesterno,
+    ch20_class_schedule_calendar.buildingcode,
+    ch20_class_schedule_calendar.classroomid,
+    ch20_class_schedule_calendar.subjectcode,
+    count(*) AS numberofsessions
+FROM ch20_class_schedule_calendar
+GROUP BY GROUPING SETS ((ch20_class_schedule_calendar.semesterno),
+    (ch20_class_schedule_calendar.buildingcode,
+        ch20_class_schedule_calendar.classroomid),
+    (ch20_class_schedule_calendar.subjectcode));
 
 -- 2. “For each department, show me the number of courses that could be offered,
 -- and whether they’re taught by a Professor, an Associate Professor, or an
@@ -472,7 +739,28 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- Note that the number of courses returned will be greater than the number of
 -- courses offered by the school because some courses could be taught by more
 -- than instructors.
--- You can find my solution in CH21_Department_Title_Count_ ROLLUP (20 rows).
+-- You can find my solution in CH21_Department_Title_Count_ROLLUP (20 rows).
+SELECT Departments.DeptName,
+    Faculty.Title,
+    COUNT(*) AS NumOfferableCourses
+FROM Staff
+    INNER JOIN Faculty
+    ON Staff.StaffID = Faculty.StaffID
+    INNER JOIN Faculty_Subjects
+    ON Staff.StaffID = Faculty_Subjects.StaffID
+    INNER JOIN Subjects
+    ON Faculty_Subjects.SubjectID = Subjects.SubjectID
+    INNER JOIN schoolschedulingexample.Categories
+    ON Subjects.CategoryID = Categories.CategoryID
+    INNER JOIN Departments
+    ON Categories.DepartmentID = Departments.DepartmentID
+GROUP BY ROLLUP (Departments.DeptName, Faculty.Title);
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'schoolschedulingexample'
+AND table_name = 'ch21_department_title_count_rollup';
 
 -- 3. “I want to know how many courses our students have been in contact with.
 -- Give me totals by whether they completed the course, are currently enrolled
@@ -481,3 +769,35 @@ GROUP BY ROLLUP(entertainers.entcity, musical_styles.stylename);
 -- you’re at it. Don’t worry about splitting it up by semester.”
 -- You can find my solution in CH21_Major_ClassStatus_Count_GROUPING_SETS (26
 -- rows).
+SELECT Majors.Major,
+    Student_Class_Status.ClassStatusDescription,
+    COUNT(*) AS NumClasses 
+FROM Majors
+    INNER JOIN Students
+    ON MAjors.MajorID = Students.StudMajor
+    INNER JOIN Student_Schedules
+    ON Students.StudentID = Student_Schedules.StudentID
+    INNER JOIN Student_Class_Status
+    ON Student_Schedules.ClassStatus = Student_Class_Status.ClassStatus
+GROUP BY GROUPING SETS (Student_Class_Status.ClassStatusDescription,
+    Majors.Major,
+    (Student_Class_Status.ClassStatusDescription, Majors.Major));
+
+/* Book Answer */
+SELECT view_definition
+FROM information_schema.views
+WHERE table_schema = 'schoolschedulingexample'
+AND table_name = 'ch21_major_classstatus_count_grouping_sets';
+
+-- Note: The book does an unnecessary join on Classes, since all we care about
+-- is the ClassIDs that are associated with Student_Schedules
+SELECT m.major,
+    scs.classstatusdescription,
+    count(*) AS courses
+FROM ((((majors m
+     JOIN students s ON ((m.majorid = s.studmajor)))
+     JOIN student_schedules ss ON ((ss.studentid = s.studentid)))
+     JOIN student_class_status scs ON ((scs.classstatus = ss.classstatus)))
+     JOIN classes c ON ((c.classid = ss.classid)))
+GROUP BY GROUPING SETS ((m.major), (scs.classstatusdescription), (m.major,
+        scs.classstatusdescription));
