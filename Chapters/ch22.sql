@@ -141,45 +141,183 @@ FROM entertainmentagencyexample.Customers AS C
 -- ROWS (or RANGE) can further limit rows in a partition with respect to the
 -- current row.
 
-/* ***** School Scheduling Database ******** */
-/* ***** Bowling League Database *********** */
-/* ***** Recipes Database ****************** */
+-- Ex. For each city where we have customers, show me the customer and the number
+-- of musical preference styles they've selected. Also give me a running total
+-- by city, both for each customer in the city as well as for the city
+-- overall.
+SELECT C.CustCity,
+    C.CustFirstName || ' ' || C.CustLastName AS Customer,
+    SUM(COUNT(*)) OVER (
+        ORDER BY C.CustCity
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) TotalUsingRows,
+    SUM(COUNT(*)) OVER (
+        ORDER BY C.CustCity
+          RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) TotalUsingRange
+FROM entertainmentagencyexample.Customers AS C
+    INNER JOIN Musical_Preferences AS MP
+    ON MP.CustomerID = C.CustomerID
+GROUP BY C.CustCity, C.CustFirstName, C.CustLastName;
 
 /* ******************************************** ****/
 /* *** Calculating a Row Number                 ****/
 /* ******************************************** ****/
+
 /* ***** Sales Orders Database ************* */
-/* ***** Entertainment Agency Database ***** */
-/* ***** School Scheduling Database ******** */
-/* ***** Bowling League Database *********** */
-/* ***** Recipes Database ****************** */
+--Ex. Assign a number for each customer. Show me their CustomerID, their name
+--and their state. Return the customers in alphabetic order. 
+SELECT ROW_NUMBER() OVER(
+           ORDER BY CustLastName, CustFirstName
+       ) AS RowNumber,
+    C.CustomerID,
+    C.CustFirstName || ' ' || C.CustLastName AS CustomerName,
+    C.CustState
+FROM Customers AS C;
+
+-- Since ROW_NUMBER() is a window function, we can use OVER() to partition the
+-- table
+-- Ex. Assign a number for each customer within their state. Show me their
+-- CustomerID, their name, and their state. Return the customers in alphabetic
+-- order.
+SELECT ROW_NUMBER() OVER(
+           PARTITION BY CustState
+           ORDER BY CustLastName, CustFirstName
+       ) AS RowNumber,
+    C.CustomerID,
+    C.CustFirstName || ' ' || C.CustLastName AS CustomerName,
+    C.CustState
+FROM Customers AS C;
 
 /* ******************************************** ****/
 /* *** Ranking Data                             ****/
 /* ******************************************** ****/
-/* ***** Sales Orders Database ************* */
-/* ***** Entertainment Agency Database ***** */
+
 /* ***** School Scheduling Database ******** */
+-- Ex. List all students who have completed English courses and rank them by the
+-- grade that they received.
+SELECT Su.SubjectID,
+    St.StudFirstName,
+    St.StudLastName,
+    Su.SubjectName,
+    SS.Grade,
+    RANK() OVER (
+        ORDER BY SS.Grade DESC
+    ) AS Rank
+FROM Students AS St
+    INNER JOIN Student_Schedules AS SS
+    ON St.StudentID = SS.StudentID
+    INNER JOIN Classes AS C
+    ON SS.ClassID = C.ClassID
+    INNER JOIN Subjects AS Su
+    ON C.SubjectID = Su.SubjectID
+WHERE SS.ClassStatus = 2
+    AND Su.CategoryID = 'ENG';
+
 /* ***** Bowling League Database *********** */
-/* ***** Recipes Database ****************** */
+
+-- RANK() has gaps when ties are given, DENSE_RANK() always returns
+-- consecutive ranks and have no gaps, and PERCENT_RANK() returns the percentile
+-- rank relative to the total number of rows.
+-- Ex. List all the bowlers in the league, ranking them by their average
+-- handicapped scores. Show all three of RANK(), DENSE_RANK(), and
+-- PERCENT_RANK() to show the difference. (Remember that bowling scores are
+-- reported as rounded integer values.)
+SELECT B.BowlerID,
+    B.BowlerFirstName || ' ' || B.BowlerLastName AS BowlerName,
+    ROUND(AVG(BS.HandiCapScore), 0) AS AvgHandicap,
+    RANK () OVER (
+        ORDER BY ROUND(AVG(BS.HandiCapScore), 0) DESC
+    ) AS Rank,
+    DENSE_RANK () OVER (
+        ORDER BY ROUND(AVG(BS.HandiCapScore), 0) DESC
+    ) AS DenseRank,
+    PERCENT_RANK () OVER (
+        ORDER BY ROUND(AVG(BS.HandiCapScore), 0) DESC
+    ) AS PercentRank
+FROM Bowlers AS B
+    INNER JOIN Bowler_Scores AS BS
+    ON B.BowlerID = BS.BowlerID
+GROUP BY B.BowlerID, B.BowlerFirstName, B.BowlerLastName;
 
 /* ******************************************** ****/
 /* *** Splitting Data Into Quantiles            ****/
 /* ******************************************** ****/
-/* ***** Sales Orders Database ************* */
-/* ***** Entertainment Agency Database ***** */
+
 /* ***** School Scheduling Database ******** */
-/* ***** Bowling League Database *********** */
-/* ***** Recipes Database ****************** */
+-- Ex. List all students who have completed English courses, rank them by the
+-- grades they received, and indicate the Quintile into which they fell.
+-- Note: The NTILE() function breaks the table into a specified number of
+-- groups equally. When groups cannot be equally broken up, larger groups come
+-- before smaller groups. So here, 18 rows split into 5 groups: 4,4,4,3,3
+SELECT Su.SubjectID,
+    St.StudFirstName,
+    St.StudLastName,
+    SS.ClassStatus,
+    SS.Grade,
+    Su.CategoryID,
+    Su.SubjectName,
+    RANK() OVER (ORDER BY SS.Grade DESC) AS Rank,
+    NTILE(5) OVER (ORDER BY SS.Grade DESC) AS Quintile
+FROM Students AS St
+    INNER JOIN Student_Schedules AS SS
+    ON St.StudentID = SS.StudentID
+    INNER JOIN Classes AS C
+    ON SS.ClassID = C.ClassID
+    INNER JOIN Subjects AS Su
+    ON C.SubjectID = Su.SubjectID
+WHERE SS.ClassStatus = 2
+    AND Su.CategoryID = 'ENG';
 
 /* ******************************************** ****/
 /* *** Using Windows with Aggregate Functions   ****/
 /* ******************************************** ****/
+
 /* ***** Sales Orders Database ************* */
-/* ***** Entertainment Agency Database ***** */
-/* ***** School Scheduling Database ******** */
-/* ***** Bowling League Database *********** */
-/* ***** Recipes Database ****************** */
+-- Both ROWS and RANGE predicates limit the data on which the aggregate
+-- functions work. Using ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW with
+-- COUNT(*) counts the rows "in front" of the current row, i.e. ROW_NUMBER(),
+-- but RANGE gives a running total by RANGE.
+-- Ex. Give a count of how many detail lines are associated with each order
+-- placed. I want to see the order number, the product purchased and a count of
+-- how many items are on the invoice. I'd also like to see how many small detail
+-- lines there are in total.
+SELECT O.OrderNumber AS OrderNo,
+    P.ProductName,
+    COUNT(*) OVER (
+        PARTITION BY O.OrderNumber
+    ) AS Total,
+    COUNT(*) OVER (
+        ORDER BY O.OrderNumber
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS TotalUsingRows,
+    COUNT(*) OVER (
+        ORDER BY O.OrderNumber
+        RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS TotalUsingRange
+FROM Orders AS O
+    INNER JOIN Order_Details AS OD
+    ON O.OrderNumber = OD.OrderNumber
+    INNER JOIN Products AS P
+    ON P.ProductNumber = OD.ProductNumber;
+
+-- Ex. List all orders placed, including the customer name, the order number,
+-- the quantity ordered, the quoted price, and the total price per order.
+SELECT C.CustFirstName || ' ' || C.CustLastName AS Customer,
+    O.OrderNumber AS Order,
+    P.ProductName,
+    OD.QuantityOrdered AS Quantity,
+    OD.QuotedPrice AS Price,
+    SUM(OD.QuotedPrice) OVER (
+        PARTITION BY O.OrderNumber
+    ) AS OrderTotal
+FROM Orders AS O
+    INNER JOIN Order_Details AS OD
+    ON O.OrderNumber = OD.OrderNumber
+    INNER JOIN Customers AS C
+    ON O.CustomerID = C.CustomerID
+    INNER JOIN Products AS P
+    ON P.ProductNumber = OD.ProductNumber;
 
 /* ******************************************** ****/
 /* *** Sample Statements                        ****/
